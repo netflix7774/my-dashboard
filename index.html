@@ -30,6 +30,30 @@
                 overflow: hidden;
             }
 
+            /* 사이드바 접기용 애니메이션 스타일 */
+            .sidebar {
+                width: var(--sidebar-width);
+                background: var(--sidebar-bg);
+                border-right: 1px solid var(--border-color);
+                display: flex;
+                flex-direction: column;
+                padding: 12px;
+                z-index: 100;
+                box-sizing: border-box;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 부드러운 전환 */
+                overflow-x: hidden;
+                white-space: nowrap;
+            }
+
+            /* 접혔을 때 상태 */
+            body.collapsed .sidebar {
+                width: 0;
+                padding: 12px 0;
+                border-right: none;
+                opacity: 0;
+                pointer-events: none;
+            }
+
             #modeSwitcher {
                 background: rgba(255, 255, 255, 0.08);
                 backdrop-filter: blur(15px);
@@ -61,16 +85,6 @@
                 margin-left: 8px;
             }
 
-            .sidebar {
-                width: var(--sidebar-width);
-                background: var(--sidebar-bg);
-                border-right: 1px solid var(--border-color);
-                display: flex;
-                flex-direction: column;
-                padding: 12px;
-                z-index: 100;
-                box-sizing: border-box;
-            }
             .brand-title {
                 font-size: 11px;
                 font-weight: 800;
@@ -174,8 +188,6 @@
                 font-weight: bold;
                 box-sizing: border-box;
             }
-
-            /* 추가된 버튼 스타일 */
             .sync-group {
                 display: flex;
                 gap: 4px;
@@ -308,6 +320,18 @@
                 border-radius: 4px;
                 font-size: 10px;
             }
+
+            /* 토글 버튼 전용 스타일 */
+            .btn-toggle {
+                font-size: 16px;
+                margin-right: 12px;
+                background: none;
+                border: none;
+                color: white;
+                cursor: pointer;
+                padding: 0;
+            }
+
             .frame-wrap {
                 flex-grow: 1;
                 margin: 10px;
@@ -356,6 +380,7 @@
         <main class="main-view">
             <header class="top-bar">
                 <div style="display: flex; align-items: center; margin-right: auto">
+                    <button class="btn-toggle" onclick="toggleSidebar()">☰</button>
                     <button id="modeSwitcher" onclick="goToMobileSite()"><span>📱</span> <span>Mobile</span></button>
                     <button id="noteBtn" onclick="openNote()"><span>📝</span> <span>Note</span></button>
                 </div>
@@ -386,6 +411,11 @@
             let cycleIntervalTimer = null,
                 cycleMode = 'all',
                 sortableInstance = null;
+
+            /* --- 사이드바 토글 함수 추가 --- */
+            function toggleSidebar() {
+                document.body.classList.toggle('collapsed');
+            }
 
             function openNote() {
                 const prevUrl = currentUrl;
@@ -585,11 +615,9 @@
                 window.location.href = 'https://netflix7774.github.io/mobile/index.html';
             }
 
-            /* --- 추가된 데이터 관리 함수 --- */
             function exportBookmarks() {
                 const bms = localStorage.getItem('myHubBookmarks');
                 if (!bms) return alert('내보낼 북마크가 없습니다.');
-                
                 const blob = new Blob([bms], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -616,12 +644,8 @@
                                     renderBookmarks();
                                     alert('북마크 동기화가 완료되었습니다.');
                                 }
-                            } else {
-                                alert('유효한 북마크 형식이 아닙니다.');
-                            }
-                        } catch (err) {
-                            alert('파일 읽기 오류: JSON 형식을 확인해주세요.');
-                        }
+                            } else alert('유효한 북마크 형식이 아닙니다.');
+                        } catch (err) { alert('파일 읽기 오류입니다.'); }
                     };
                     reader.readAsText(file);
                 };
