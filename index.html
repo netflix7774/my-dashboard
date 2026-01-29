@@ -17,6 +17,7 @@
                 --glass-bg: rgba(255, 255, 255, 0.05);
                 --border-color: rgba(255, 255, 255, 0.1);
                 --sidebar-width: 140px;
+                --divider-color: #ff6b35;
             }
 
             body {
@@ -33,6 +34,8 @@
             /* 사이드바 접기용 애니메이션 스타일 */
             .sidebar {
                 width: var(--sidebar-width);
+                min-width: var(--sidebar-width);
+                flex-shrink: 0;
                 background: var(--sidebar-bg);
                 border-right: 1px solid var(--border-color);
                 display: flex;
@@ -40,14 +43,14 @@
                 padding: 12px;
                 z-index: 100;
                 box-sizing: border-box;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 부드러운 전환 */
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 overflow-x: hidden;
                 white-space: nowrap;
             }
 
-            /* 접혔을 때 상태 */
             body.collapsed .sidebar {
                 width: 0;
+                min-width: 0;
                 padding: 12px 0;
                 border-right: none;
                 opacity: 0;
@@ -258,25 +261,50 @@
                 left: 50%;
                 transform: translateX(-50%);
                 z-index: 1000;
-                background: var(--accent-red);
-                padding: 4px 8px;
                 border-radius: 30px;
                 box-shadow: 0 8px 25px rgba(217, 4, 41, 0.5);
                 border: 1px solid rgba(255, 255, 255, 0.2);
                 min-width: 350px;
                 display: flex;
                 align-items: center;
+                justify-content: center;
             }
 
-            #standardTitle {
+            .floating-title a {
+                background: var(--accent-red);
                 color: white;
                 text-decoration: none;
-                font-size: 18px;
+                font-size: 20px;
                 font-weight: 800;
                 padding: 6px 25px;
                 display: block;
                 width: 100%;
                 text-align: center;
+                border-radius: 30px;
+            }
+
+            /* 1x4 모드에서 제목 크기 */
+            .split-horizontal .floating-title {
+                min-width: auto;
+                top: 8px;
+            }
+
+            .split-horizontal .floating-title a {
+                font-size: 20px;
+                padding: 6px 25px;
+                font-weight: 800;
+            }
+
+            /* 2x2 모드에서만 제목 크기 약간 축소 */
+            .split-grid .floating-title {
+                min-width: auto;
+                top: 8px;
+            }
+
+            .split-grid .floating-title a {
+                font-size: 15.4px;
+                padding: 5px 15px;
+                font-weight: 800;
             }
 
             .main-view {
@@ -321,7 +349,6 @@
                 font-size: 10px;
             }
 
-            /* 토글 버튼 전용 스타일 */
             .btn-toggle {
                 font-size: 16px;
                 margin-right: 12px;
@@ -332,6 +359,7 @@
                 padding: 0;
             }
 
+            /* 화면 분할 관련 스타일 */
             .frame-wrap {
                 flex-grow: 1;
                 margin: 10px;
@@ -340,7 +368,91 @@
                 position: relative;
                 border: 1px solid var(--border-color);
                 background: #ffffff;
+                display: flex;
             }
+
+            /* 분할 모드별 레이아웃 */
+            .frame-wrap.split-horizontal {
+                flex-direction: row;
+            }
+
+            .frame-wrap.split2 {
+                flex-direction: row;
+            }
+
+            .frame-wrap.split3 {
+                flex-direction: row;
+            }
+
+            .frame-wrap.split-grid {
+                flex-wrap: wrap;
+            }
+
+            .frame-container {
+                position: relative;
+                background: #ffffff;
+                overflow: hidden;
+            }
+
+            /* 단일 모드 */
+            .frame-wrap.split-single .frame-container {
+                width: 100%;
+                height: 100%;
+            }
+
+            /* 세로 2분할 (1x2) */
+            .frame-wrap.split2 .frame-container {
+                width: 50%;
+                height: 100%;
+            }
+
+            /* 세로 3분할 (1x3) */
+            .frame-wrap.split3 .frame-container {
+                width: 33.333%;
+                height: 100%;
+            }
+
+            /* 세로 4분할 (1x4) */
+            .frame-wrap.split-horizontal .frame-container {
+                width: 25%;
+                height: 100%;
+            }
+
+            /* 2x2 그리드 */
+            .frame-wrap.split-grid .frame-container {
+                width: 50%;
+                height: 50%;
+            }
+
+            /* 리사이저 바 */
+            .resizer {
+                background: var(--divider-color);
+                position: absolute;
+                z-index: 10;
+            }
+
+            .resizer:hover {
+                background: #ff8c5a;
+            }
+
+            .resizer.horizontal {
+                width: 100%;
+                height: 4px;
+                cursor: row-resize;
+                left: 0;
+            }
+
+            .resizer.vertical {
+                width: 4px;
+                height: 100%;
+                cursor: col-resize;
+                top: 0;
+            }
+
+            .resizer.dragging {
+                background: #ffa366;
+            }
+
             iframe {
                 position: absolute;
                 top: 0;
@@ -349,6 +461,96 @@
                 height: 100%;
                 border: none;
                 transition: opacity 0.3s;
+            }
+
+            /* 분할 모드 버튼 스타일 */
+            .split-controls {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                border-left: 1px solid var(--border-color);
+                padding-left: 12px;
+                margin-left: 12px;
+                position: relative;
+            }
+
+            .btn-split-current {
+                background: var(--accent-blue);
+                border: 1px solid var(--accent-blue);
+                color: white;
+                cursor: pointer;
+                padding: 4px 12px;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: 600;
+                position: relative;
+            }
+
+            .btn-split-current:hover {
+                background: #0070e0;
+            }
+
+            .split-dropdown {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                margin-top: 4px;
+                background: var(--sidebar-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 6px;
+                padding: 4px;
+                z-index: 10000;
+                min-width: 80px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            }
+
+            .split-dropdown.show {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            .split-dropdown-item {
+                background: var(--glass-bg);
+                border: 1px solid var(--border-color);
+                color: white;
+                cursor: pointer;
+                padding: 6px 12px;
+                border-radius: 4px;
+                font-size: 10px;
+                text-align: center;
+                transition: all 0.2s;
+            }
+
+            .split-dropdown-item:hover {
+                background: rgba(255, 255, 255, 0.15);
+                border-color: var(--accent-blue);
+            }
+
+            .split-dropdown-item.active {
+                background: var(--accent-blue);
+                border-color: var(--accent-blue);
+            }
+
+            .btn-split {
+                background: var(--glass-bg);
+                border: 1px solid var(--border-color);
+                color: white;
+                cursor: pointer;
+                padding: 4px 10px;
+                border-radius: 4px;
+                font-size: 10px;
+                transition: all 0.2s;
+            }
+
+            .btn-split.active {
+                background: var(--accent-blue);
+                border-color: var(--accent-blue);
+            }
+
+            .btn-split:hover {
+                background: rgba(255, 255, 255, 0.1);
             }
         </style>
     </head>
@@ -386,6 +588,16 @@
                 </div>
 
                 <div class="toolbar-group">
+                    <div class="split-controls">
+                        <button class="btn-split-current" onclick="toggleSplitDropdown()">1x1 ▼</button>
+                        <div class="split-dropdown" id="splitDropdown">
+                            <div class="split-dropdown-item active" onclick="setSplitMode('single')">1x1</div>
+                            <div class="split-dropdown-item" onclick="setSplitMode('split2')">1x2</div>
+                            <div class="split-dropdown-item" onclick="setSplitMode('split3')">1x3</div>
+                            <div class="split-dropdown-item" onclick="setSplitMode('horizontal')">1x4</div>
+                            <div class="split-dropdown-item" onclick="setSplitMode('grid')">2x2</div>
+                        </div>
+                    </div>
                     <div class="ctrl-item" style="font-size: 10px; color: var(--text-secondary)"><span>CROP</span><input type="number" id="pcCropValue" class="input-mini" value="0" oninput="applyPcCrop()" /></div>
                     <div class="ctrl-item" style="border-left: 1px solid var(--border-color); padding-left: 10px; display: flex; gap: 5px">
                         <button id="modeToggleBtn" class="btn-top-action" onclick="toggleCycleMode()">All</button>
@@ -396,11 +608,8 @@
                 </div>
             </header>
 
-            <div class="frame-wrap">
-                <div class="floating-title" id="pcFloatingTitle">
-                    <a id="standardTitle" href="#" target="_blank">포텐</a>
-                </div>
-                <iframe id="pcMainFrame" src="https://m.fmkorea.com/" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+            <div class="frame-wrap split-single" id="frameWrap">
+                <!-- 프레임들이 동적으로 생성됩니다 -->
             </div>
         </main>
 
@@ -412,19 +621,60 @@
                 cycleMode = 'all',
                 sortableInstance = null;
 
-            /* --- 사이드바 토글 함수 추가 --- */
+            // 화면 분할 관련 변수
+            let splitMode = 'single';
+            let currentFrameIndex = 0;
+            let frameUrls = ['https://m.fmkorea.com/', '', '', ''];
+            let frameTitles = ['포텐', '', '', ''];
+            let resizeState = {
+                isResizing: false,
+                startPos: 0,
+                startSize: 0,
+                targetIndex: -1,
+                direction: ''
+            };
+
+            // 프레임 크기 비율 (초기값 50:50)
+            let frameSizes = {
+                split2: [50, 50], // 1x2
+                split3: [33.333, 33.333, 33.334], // 1x3
+                horizontal: [25, 25, 25, 25], // 1x4
+                grid: [50, 50, 50, 50] // 2x2
+            };
+
+            // 드롭다운 토글
+            function toggleSplitDropdown() {
+                const dropdown = document.getElementById('splitDropdown');
+                dropdown.classList.toggle('show');
+            }
+
+            // 드롭다운 외부 클릭 시 닫기
+            document.addEventListener('click', function(e) {
+                const dropdown = document.getElementById('splitDropdown');
+                const button = document.querySelector('.btn-split-current');
+                if (dropdown && button && !dropdown.contains(e.target) && !button.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+
             function toggleSidebar() {
                 document.body.classList.toggle('collapsed');
             }
 
             function openNote() {
                 const prevUrl = currentUrl;
-                const prevTitle = document.getElementById('standardTitle').innerText.replace(/'/g, "\\'");
+                const prevTitle = document.getElementById('standardTitle') ? document.getElementById('standardTitle').innerText.replace(/'/g, "\\'") : '포텐';
 
-                document.getElementById('standardTitle').innerText = 'Personal Note';
+                // 단일 모드로 전환
+                if (splitMode !== 'single') {
+                    setSplitMode('single');
+                }
+
+                const frame = document.getElementById('frame-0');
+                const title = document.getElementById('title-0');
+                if (title) title.innerText = 'Personal Note';
 
                 const savedNote = localStorage.getItem('myHubNote') || '';
-                const frame = document.getElementById('pcMainFrame');
                 frame.style.opacity = '0';
 
                 frame.srcdoc = `
@@ -556,35 +806,86 @@
             }
 
             function loadSite(url, title) {
-                currentUrl = url;
-                const frame = document.getElementById('pcMainFrame');
-                document.getElementById('standardTitle').innerText = title;
-                document.getElementById('standardTitle').href = url;
-                frame.style.opacity = '0';
-                frame.removeAttribute('srcdoc');
-                frame.src = url;
-                frame.onload = () => {
-                    frame.style.opacity = '1';
-                    applyPcCrop();
-                };
+                if (splitMode === 'single') {
+                    // 단일 모드: 기존 방식대로
+                    currentUrl = url;
+                    frameUrls[0] = url;
+                    frameTitles[0] = title;
+                    const frame = document.getElementById('frame-0');
+                    const titleEl = document.getElementById('title-0');
+                    
+                    if (titleEl) {
+                        titleEl.innerText = title;
+                        titleEl.href = url;
+                    }
+                    
+                    frame.style.opacity = '0';
+                    frame.removeAttribute('srcdoc');
+                    frame.src = url;
+                    frame.onload = () => {
+                        frame.style.opacity = '1';
+                        applyPcCrop();
+                    };
+                } else {
+                    // 분할 모드: 순환 방식
+                    const maxFrames = splitMode === 'split2' ? 2 : splitMode === 'split3' ? 3 : splitMode === 'horizontal' ? 4 : 4;
+                    currentFrameIndex = (currentFrameIndex + 1) % maxFrames;
+                    
+                    frameUrls[currentFrameIndex] = url;
+                    frameTitles[currentFrameIndex] = title;
+                    
+                    const frame = document.getElementById(`frame-${currentFrameIndex}`);
+                    const titleEl = document.getElementById(`title-${currentFrameIndex}`);
+                    
+                    if (titleEl) {
+                        titleEl.innerText = title;
+                        titleEl.href = url;
+                    }
+                    
+                    frame.style.opacity = '0';
+                    frame.removeAttribute('srcdoc');
+                    frame.src = url;
+                    frame.onload = () => {
+                        frame.style.opacity = '1';
+                    };
+                }
+                
                 renderBookmarks();
             }
 
             function smartRefresh() {
-                document.getElementById('pcMainFrame').src = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'r=' + Date.now();
+                if (splitMode === 'single') {
+                    document.getElementById('frame-0').src = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'r=' + Date.now();
+                } else {
+                    // 분할 모드에서는 현재 보이는 모든 프레임 새로고침
+                    const maxFrames = splitMode === 'split2' ? 2 : splitMode === 'split3' ? 3 : 4;
+                    for (let i = 0; i < maxFrames; i++) {
+                        const frame = document.getElementById(`frame-${i}`);
+                        if (frameUrls[i] && frame) {
+                            frame.src = frameUrls[i] + (frameUrls[i].includes('?') ? '&' : '?') + 'r=' + Date.now();
+                        }
+                    }
+                }
             }
 
             function applyPcCrop() {
                 const val = document.getElementById('pcCropValue').value || 0;
-                const frame = document.getElementById('pcMainFrame');
-                frame.style.top = `-${val}%`;
-                frame.style.height = `${100 + parseInt(val)}%`;
+                if (splitMode === 'single') {
+                    const frame = document.getElementById('frame-0');
+                    frame.style.top = `-${val}%`;
+                    frame.style.height = `${100 + parseInt(val)}%`;
+                }
             }
+
             function toggleCycleMode() {
+                // 분할 모드에서는 토글 불가
+                if (splitMode !== 'single') return;
+                
                 const btn = document.getElementById('modeToggleBtn');
                 cycleMode = cycleMode === 'all' ? 'single' : 'all';
                 btn.innerText = cycleMode === 'all' ? 'All' : 'One';
             }
+
             function toggleCycle() {
                 const btn = document.getElementById('cycleBtn');
                 if (cycleIntervalTimer) {
@@ -595,15 +896,30 @@
                     let sec = parseInt(document.getElementById('cycleInterval').value) || 10;
                     btn.innerText = 'Stop';
                     cycleIntervalTimer = setInterval(() => {
-                        if (cycleMode === 'all') {
-                            const bms = JSON.parse(localStorage.getItem('myHubBookmarks'));
-                            let idx = bms.findIndex((bm) => bm.url === currentUrl);
-                            let next = (idx + 1) % bms.length;
-                            loadSite(bms[next].url, bms[next].name);
-                        } else smartRefresh();
+                        if (splitMode === 'single') {
+                            // 단일 모드
+                            if (cycleMode === 'all') {
+                                const bms = JSON.parse(localStorage.getItem('myHubBookmarks'));
+                                let idx = bms.findIndex((bm) => bm.url === currentUrl);
+                                let next = (idx + 1) % bms.length;
+                                loadSite(bms[next].url, bms[next].name);
+                            } else {
+                                smartRefresh();
+                            }
+                        } else {
+                            // 분할 모드 - 모든 프레임 새로고침
+                            const maxFrames = splitMode === 'split2' ? 2 : splitMode === 'split3' ? 3 : 4;
+                            for (let i = 0; i < maxFrames; i++) {
+                                const frame = document.getElementById(`frame-${i}`);
+                                if (frameUrls[i] && frame) {
+                                    frame.src = frameUrls[i] + (frameUrls[i].includes('?') ? '&' : '?') + 'r=' + Date.now();
+                                }
+                            }
+                        }
                     }, sec * 1000);
                 }
             }
+
             function executeSearch() {
                 const input = document.getElementById('searchKeyword'),
                     keyword = input.value.trim();
@@ -611,6 +927,7 @@
                 loadSite('https://m.fmkorea.com/search.php?act=IS&is_keyword=' + encodeURIComponent(keyword), 'Search Result');
                 input.value = '';
             }
+
             function goToMobileSite() {
                 window.location.href = 'https://netflix7774.github.io/mobile/index.html';
             }
@@ -652,10 +969,310 @@
                 input.click();
             }
 
+            // 화면 분할 모드 설정
+            function setSplitMode(mode) {
+                splitMode = mode;
+                currentFrameIndex = 0; // 프레임 인덱스 초기화
+                
+                // 드롭다운 닫기
+                document.getElementById('splitDropdown').classList.remove('show');
+                
+                // 드롭다운 아이템 활성화 상태 업데이트
+                document.querySelectorAll('.split-dropdown-item').forEach(item => item.classList.remove('active'));
+                event.target.classList.add('active');
+                
+                // 현재 버튼 텍스트 업데이트
+                const modeNames = {
+                    'single': '1x1',
+                    'split2': '1x2',
+                    'split3': '1x3',
+                    'horizontal': '1x4',
+                    'grid': '2x2'
+                };
+                document.querySelector('.btn-split-current').innerText = modeNames[mode] + ' ▼';
+                
+                // 분할 모드일 때 자동으로 'One' 모드로 전환
+                if (mode !== 'single') {
+                    cycleMode = 'single';
+                    document.getElementById('modeToggleBtn').innerText = 'One';
+                    document.getElementById('modeToggleBtn').disabled = true;
+                    document.getElementById('modeToggleBtn').style.opacity = '0.5';
+                    document.getElementById('modeToggleBtn').style.cursor = 'not-allowed';
+                } else {
+                    // 단일 모드로 돌아올 때 원래대로 복구
+                    document.getElementById('modeToggleBtn').disabled = false;
+                    document.getElementById('modeToggleBtn').style.opacity = '1';
+                    document.getElementById('modeToggleBtn').style.cursor = 'pointer';
+                }
+                
+                renderFrames();
+            }
+
+            // 프레임 렌더링
+            function renderFrames() {
+                const wrap = document.getElementById('frameWrap');
+                wrap.className = `frame-wrap split-${splitMode}`;
+                wrap.innerHTML = '';
+
+                if (splitMode === 'single') {
+                    // 단일 모드
+                    wrap.innerHTML = `
+                        <div class="frame-container" id="container-0">
+                            <div class="floating-title" id="title-container-0">
+                                <a id="title-0" href="${frameUrls[0]}" target="_blank">${frameTitles[0]}</a>
+                            </div>
+                            <iframe id="frame-0" src="${frameUrls[0]}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                        </div>
+                    `;
+                    currentUrl = frameUrls[0];
+                } else if (splitMode === 'split2') {
+                    // 세로 2분할 (1x2)
+                    for (let i = 0; i < 2; i++) {
+                        const container = document.createElement('div');
+                        container.className = 'frame-container';
+                        container.id = `container-${i}`;
+                        container.style.width = `${frameSizes.split2[i]}%`;
+                        
+                        container.innerHTML = `
+                            <div class="floating-title" id="title-container-${i}">
+                                <a id="title-${i}" href="${frameUrls[i] || '#'}" target="_blank">${frameTitles[i] || `프레임 ${i + 1}`}</a>
+                            </div>
+                            <iframe id="frame-${i}" src="${frameUrls[i] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                        `;
+                        
+                        wrap.appendChild(container);
+                        
+                        // 리사이저 추가 (마지막 프레임 제외)
+                        if (i < 1) {
+                            const resizer = document.createElement('div');
+                            resizer.className = 'resizer vertical';
+                            resizer.dataset.index = i;
+                            resizer.style.left = `${frameSizes.split2.slice(0, i + 1).reduce((a, b) => a + b, 0)}%`;
+                            resizer.addEventListener('mousedown', startResize);
+                            wrap.appendChild(resizer);
+                        }
+                    }
+                } else if (splitMode === 'split3') {
+                    // 세로 3분할 (1x3)
+                    for (let i = 0; i < 3; i++) {
+                        const container = document.createElement('div');
+                        container.className = 'frame-container';
+                        container.id = `container-${i}`;
+                        container.style.width = `${frameSizes.split3[i]}%`;
+                        
+                        container.innerHTML = `
+                            <div class="floating-title" id="title-container-${i}">
+                                <a id="title-${i}" href="${frameUrls[i] || '#'}" target="_blank">${frameTitles[i] || `프레임 ${i + 1}`}</a>
+                            </div>
+                            <iframe id="frame-${i}" src="${frameUrls[i] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                        `;
+                        
+                        wrap.appendChild(container);
+                        
+                        // 리사이저 추가 (마지막 프레임 제외)
+                        if (i < 2) {
+                            const resizer = document.createElement('div');
+                            resizer.className = 'resizer vertical';
+                            resizer.dataset.index = i;
+                            resizer.style.left = `${frameSizes.split3.slice(0, i + 1).reduce((a, b) => a + b, 0)}%`;
+                            resizer.addEventListener('mousedown', startResize);
+                            wrap.appendChild(resizer);
+                        }
+                    }
+                } else if (splitMode === 'horizontal') {
+                    // 세로 4분할 (1x4)
+                    for (let i = 0; i < 4; i++) {
+                        const container = document.createElement('div');
+                        container.className = 'frame-container';
+                        container.id = `container-${i}`;
+                        container.style.width = `${frameSizes.horizontal[i]}%`;
+                        
+                        container.innerHTML = `
+                            <div class="floating-title" id="title-container-${i}">
+                                <a id="title-${i}" href="${frameUrls[i] || '#'}" target="_blank">${frameTitles[i] || `프레임 ${i + 1}`}</a>
+                            </div>
+                            <iframe id="frame-${i}" src="${frameUrls[i] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                        `;
+                        
+                        wrap.appendChild(container);
+                        
+                        // 리사이저 추가 (마지막 프레임 제외)
+                        if (i < 3) {
+                            const resizer = document.createElement('div');
+                            resizer.className = 'resizer vertical';
+                            resizer.dataset.index = i;
+                            resizer.style.left = `${frameSizes.horizontal.slice(0, i + 1).reduce((a, b) => a + b, 0)}%`;
+                            resizer.addEventListener('mousedown', startResize);
+                            wrap.appendChild(resizer);
+                        }
+                    }
+                } else if (splitMode === 'grid') {
+                    // 2x2 그리드
+                    for (let i = 0; i < 4; i++) {
+                        const container = document.createElement('div');
+                        container.className = 'frame-container';
+                        container.id = `container-${i}`;
+                        
+                        if (i < 2) {
+                            container.style.height = `${frameSizes.grid[0]}%`;
+                        } else {
+                            container.style.height = `${frameSizes.grid[2]}%`;
+                        }
+                        
+                        if (i % 2 === 0) {
+                            container.style.width = `${frameSizes.grid[i]}%`;
+                        } else {
+                            container.style.width = `${frameSizes.grid[i]}%`;
+                        }
+                        
+                        container.innerHTML = `
+                            <div class="floating-title" id="title-container-${i}">
+                                <a id="title-${i}" href="${frameUrls[i] || '#'}" target="_blank">${frameTitles[i] || `프레임 ${i + 1}`}</a>
+                            </div>
+                            <iframe id="frame-${i}" src="${frameUrls[i] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                        `;
+                        
+                        wrap.appendChild(container);
+                    }
+                    
+                    // 가로 리사이저 (중간)
+                    const hResizer = document.createElement('div');
+                    hResizer.className = 'resizer horizontal';
+                    hResizer.dataset.index = '0';
+                    hResizer.style.top = `${frameSizes.grid[0]}%`;
+                    hResizer.addEventListener('mousedown', startResize);
+                    wrap.appendChild(hResizer);
+                    
+                    // 세로 리사이저 (왼쪽)
+                    const vResizer1 = document.createElement('div');
+                    vResizer1.className = 'resizer vertical';
+                    vResizer1.dataset.index = '0';
+                    vResizer1.style.left = `${frameSizes.grid[0]}%`;
+                    vResizer1.style.height = `${frameSizes.grid[0]}%`;
+                    vResizer1.addEventListener('mousedown', startResize);
+                    wrap.appendChild(vResizer1);
+                    
+                    // 세로 리사이저 (오른쪽)
+                    const vResizer2 = document.createElement('div');
+                    vResizer2.className = 'resizer vertical';
+                    vResizer2.dataset.index = '1';
+                    vResizer2.style.left = `${frameSizes.grid[2]}%`;
+                    vResizer2.style.top = `${frameSizes.grid[0]}%`;
+                    vResizer2.style.height = `${100 - frameSizes.grid[0]}%`;
+                    vResizer2.addEventListener('mousedown', startResize);
+                    wrap.appendChild(vResizer2);
+                }
+            }
+
+            // 리사이즈 시작
+            function startResize(e) {
+                e.preventDefault();
+                resizeState.isResizing = true;
+                resizeState.targetIndex = parseInt(e.target.dataset.index);
+                resizeState.direction = e.target.classList.contains('horizontal') ? 'horizontal' : 'vertical';
+                resizeState.startPos = resizeState.direction === 'horizontal' ? e.clientY : e.clientX;
+                
+                e.target.classList.add('dragging');
+                
+                document.addEventListener('mousemove', handleResize);
+                document.addEventListener('mouseup', stopResize);
+            }
+
+            // 리사이즈 처리
+            function handleResize(e) {
+                if (!resizeState.isResizing) return;
+                
+                const wrap = document.getElementById('frameWrap');
+                const rect = wrap.getBoundingClientRect();
+                
+                if (splitMode === 'split2') {
+                    const deltaX = e.clientX - resizeState.startPos;
+                    const deltaPercent = (deltaX / rect.width) * 100;
+                    
+                    const idx = resizeState.targetIndex;
+                    const newSize1 = frameSizes.split2[idx] + deltaPercent;
+                    const newSize2 = frameSizes.split2[idx + 1] - deltaPercent;
+                    
+                    if (newSize1 > 10 && newSize2 > 10) {
+                        frameSizes.split2[idx] = newSize1;
+                        frameSizes.split2[idx + 1] = newSize2;
+                        resizeState.startPos = e.clientX;
+                        renderFrames();
+                    }
+                } else if (splitMode === 'split3') {
+                    const deltaX = e.clientX - resizeState.startPos;
+                    const deltaPercent = (deltaX / rect.width) * 100;
+                    
+                    const idx = resizeState.targetIndex;
+                    const newSize1 = frameSizes.split3[idx] + deltaPercent;
+                    const newSize2 = frameSizes.split3[idx + 1] - deltaPercent;
+                    
+                    if (newSize1 > 10 && newSize2 > 10) {
+                        frameSizes.split3[idx] = newSize1;
+                        frameSizes.split3[idx + 1] = newSize2;
+                        resizeState.startPos = e.clientX;
+                        renderFrames();
+                    }
+                } else if (splitMode === 'horizontal') {
+                    const deltaX = e.clientX - resizeState.startPos;
+                    const deltaPercent = (deltaX / rect.width) * 100;
+                    
+                    const idx = resizeState.targetIndex;
+                    const newSize1 = frameSizes.horizontal[idx] + deltaPercent;
+                    const newSize2 = frameSizes.horizontal[idx + 1] - deltaPercent;
+                    
+                    if (newSize1 > 10 && newSize2 > 10) {
+                        frameSizes.horizontal[idx] = newSize1;
+                        frameSizes.horizontal[idx + 1] = newSize2;
+                        resizeState.startPos = e.clientX;
+                        renderFrames();
+                    }
+                } else if (splitMode === 'grid') {
+                    if (resizeState.direction === 'horizontal') {
+                        const deltaY = e.clientY - resizeState.startPos;
+                        const deltaPercent = (deltaY / rect.height) * 100;
+                        
+                        const newSize1 = frameSizes.grid[0] + deltaPercent;
+                        const newSize2 = 100 - newSize1;
+                        
+                        if (newSize1 > 20 && newSize2 > 20) {
+                            frameSizes.grid[0] = frameSizes.grid[1] = newSize1;
+                            frameSizes.grid[2] = frameSizes.grid[3] = newSize2;
+                            resizeState.startPos = e.clientY;
+                            renderFrames();
+                        }
+                    } else {
+                        const deltaX = e.clientX - resizeState.startPos;
+                        const deltaPercent = (deltaX / rect.width) * 100;
+                        
+                        if (resizeState.targetIndex === 0) {
+                            const newSize = frameSizes.grid[0] + deltaPercent;
+                            if (newSize > 20 && newSize < 80) {
+                                frameSizes.grid[0] = frameSizes.grid[2] = newSize;
+                                frameSizes.grid[1] = frameSizes.grid[3] = 100 - newSize;
+                                resizeState.startPos = e.clientX;
+                                renderFrames();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 리사이즈 종료
+            function stopResize(e) {
+                if (!resizeState.isResizing) return;
+                
+                resizeState.isResizing = false;
+                document.querySelectorAll('.resizer').forEach(r => r.classList.remove('dragging'));
+                
+                document.removeEventListener('mousemove', handleResize);
+                document.removeEventListener('mouseup', stopResize);
+            }
+
             window.onload = () => {
                 if (!localStorage.getItem('myHubBookmarks')) localStorage.setItem('myHubBookmarks', JSON.stringify([{ name: '포텐', url: 'https://m.fmkorea.com/' }]));
                 renderBookmarks();
-                loadSite(currentUrl, '포텐');
+                renderFrames();
             };
         </script>
     </body>
