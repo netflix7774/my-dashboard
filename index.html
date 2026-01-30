@@ -808,6 +808,16 @@
                         }
                     });
                     
+                    // Ctrl+S 단축키로 저장
+                    document.addEventListener('keydown', function(e) {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                            e.preventDefault(); // 브라우저 기본 저장 동작 방지
+                            if (!saveBtn.disabled) {
+                                saveNote();
+                            }
+                        }
+                    });
+                    
                     function saveNote() {
                         const val = document.getElementById('noteArea').value;
                         localStorage.setItem('myHubNote', val);
@@ -818,6 +828,7 @@
             </body>
             </html>
         `;
+
 
                 setTimeout(() => {
                     frame.style.opacity = '1';
