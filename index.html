@@ -780,7 +780,8 @@
                     .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
                     button { padding: 12px 28px; border-radius: 30px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; font-size: 14px; }
                     .btn-save { background: #0a84ff; color: white; box-shadow: 0 4px 10px rgba(10, 132, 255, 0.3); }
-                    .btn-save:hover { background: #0070e0; transform: scale(1.03); }
+                    .btn-save:hover:not(:disabled) { background: #0070e0; transform: scale(1.03); }
+                    .btn-save:disabled { background: #d1d5db; color: #9ca3af; box-shadow: none; cursor: not-allowed; opacity: 0.6; }
                     .btn-close { background: #f0f3f4; color: #536471; }
                     .btn-close:hover { background: #e2e5e7; }
                 </style>
@@ -789,20 +790,35 @@
                 <div class="note-container">
                     <textarea id="noteArea" placeholder="나만의 작업 메모를 남겨보세요...">${savedNote}</textarea>
                     <div class="actions">
-                        <button class="btn-close" onclick="window.parent.loadSite('${prevUrl}', '${prevTitle}')">Close</button>
-                        <button class="btn-save" onclick="saveNote()">Save Note</button>
+                        <button class="btn-close" onclick="window.parent.loadSite('${prevUrl}', '${prevTitle}')">Back</button>
+                        <button class="btn-save" id="saveBtn" onclick="saveNote()" disabled>Save Note</button>
                     </div>
                 </div>
                 <script>
+                    let initialValue = document.getElementById('noteArea').value;
+                    const saveBtn = document.getElementById('saveBtn');
+                    
+                    // textarea 변화 감지
+                    document.getElementById('noteArea').addEventListener('input', function() {
+                        const currentValue = this.value;
+                        if (currentValue !== initialValue) {
+                            saveBtn.disabled = false;
+                        } else {
+                            saveBtn.disabled = true;
+                        }
+                    });
+                    
                     function saveNote() {
                         const val = document.getElementById('noteArea').value;
                         localStorage.setItem('myHubNote', val);
-                        alert('메모가 안전하게 저장되었습니다.');
+                        initialValue = val; // 저장 후 초기값 업데이트
+                        saveBtn.disabled = true; // 저장 후 버튼 비활성화
                     }
                 <\/script>
             </body>
             </html>
         `;
+
                 setTimeout(() => {
                     frame.style.opacity = '1';
                 }, 50);
