@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>간단 메모장</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f4f4f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 22px;
+        }
+        textarea {
+            width: 100%;
+            height: 400px;
+            box-sizing: border-box;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            resize: vertical;
+            outline: none;
+        }
+        textarea:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 1px #4f46e5;
+        }
+        .toolbar {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        button {
+            border: none;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .primary {
+            background: #4f46e5;
+            color: white;
+        }
+        .secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+        .danger {
+            background: #ef4444;
+            color: white;
+        }
+        .status {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>메모장</h1>
+        <div class="toolbar">
+            <input
+                id="urlInput"
+                type="text"
+                placeholder="이동할 주소를 입력해."
+                style="flex: 1; padding: 6px 10px; border-radius: 999px; border: 1px solid #e5e7eb; font-size: 13px; outline: none;"
+            />
+            <button class="secondary" onclick="goUrl()">이동</button>
+            <button class="secondary" onclick="loadMemo()">불러오기</button>
+            <button class="primary" onclick="saveMemo()">저장</button>
+            <button class="danger" onclick="clearMemo()">초기화</button>
+        </div>
+        <textarea id="memo" placeholder="여기에 메모를 작성해."></textarea>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'simple_memo';
+
+        function setStatus(message) {
+            const statusEl = document.getElementById('status');
+            const now = new Date();
+            const time =
+                now.getHours().toString().padStart(2, '0') + ':' +
+                now.getMinutes().toString().padStart(2, '0') + ':' +
+                now.getSeconds().toString().padStart(2, '0');
+
+            statusEl.textContent = message ? `${message} (${time})` : '';
+        }
+
+        function saveMemo() {
+            const text = document.getElementById('memo').value;
+            localStorage.setItem(STORAGE_KEY, text);
+            setStatus('저장했어');
+        }
+
+        function loadMemo() {
+            const text = localStorage.getItem(STORAGE_KEY) || '';
+            document.getElementById('memo').value = text;
+            setStatus('불러왔어');
+        }
+
+        function clearMemo() {
+            if (!confirm('메모 내용 다 지울래?')) {
+                return;
+            }
+            document.getElementById('memo').value = '';
+            localStorage.removeItem(STORAGE_KEY);
+            setStatus('내용 초기화했어');
+        }
+
+        function normalizeUrl(url) {
+            if (!url) {
+                return null;
+            }
+            url = url.trim();
+            if (!url) {
+                return null;
+            }
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            return url;
+        }
+
+        function goUrl() {
+            const input = document.getElementById('urlInput');
+            const url = normalizeUrl(input.value);
+
+            if (!url) {
+                alert('주소를 입력해.');
+                input.focus();
+                return;
+            }
+
+            window.open(url, '_blank');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadMemo();
+
+            const urlInput = document.getElementById('urlInput');
+            urlInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    goUrl();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

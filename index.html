@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-        <title>Pro Hub Desktop v5.4.12</title>
+        <title>Pro Hub Desktop v5.5.0 Dark</title>
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
         <style>
             :root {
@@ -86,6 +86,30 @@
                 align-items: center;
                 gap: 8px;
                 margin-left: 8px;
+            }
+
+            /* 다크모드 토글 버튼 */
+            #darkModeBtn {
+                background: rgba(255, 255, 255, 0.08);
+                backdrop-filter: blur(15px);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                color: var(--text-primary);
+                padding: 5px 12px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-left: 8px;
+                transition: all 0.3s;
+            }
+
+            #darkModeBtn.active {
+                background: rgba(48, 209, 88, 0.2);
+                border-color: var(--accent-green);
+                color: var(--accent-green);
             }
 
             .brand-title {
@@ -519,7 +543,17 @@
                 width: 100%;
                 height: 100%;
                 border: none;
-                transition: opacity 0.3s;
+                transition: filter 0.3s ease;
+            }
+
+            /* 다크모드 필터 */
+            iframe.dark-mode {
+                filter: invert(0.88) hue-rotate(180deg) brightness(1.05) contrast(0.92);
+            }
+
+            /* 다크모드 배경 조정 */
+            .frame-container.dark-mode {
+                background: #1a1a1a;
             }
 
             /* 분할 모드 버튼 스타일 */
@@ -611,11 +645,67 @@
             .btn-split:hover {
                 background: rgba(255, 255, 255, 0.1);
             }
+
+            /* 날짜/시간 표시 스타일 */
+            .datetime-display {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 14px;
+                background: linear-gradient(135deg, rgba(10, 132, 255, 0.1), rgba(48, 209, 88, 0.1));
+                border: 1px solid rgba(10, 132, 255, 0.3);
+                border-radius: 8px;
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--text-primary);
+                letter-spacing: -0.3px;
+                box-shadow: 0 2px 8px rgba(10, 132, 255, 0.15);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .datetime-display::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+                animation: shimmer 3s infinite;
+            }
+
+            @keyframes shimmer {
+                0% { left: -100%; }
+                100% { left: 100%; }
+            }
+
+            .datetime-icon {
+                font-size: 13px;
+                filter: drop-shadow(0 0 3px rgba(10, 132, 255, 0.5));
+            }
+
+            .datetime-text {
+                display: flex;
+                flex-direction: column;
+                gap: 1px;
+            }
+
+            .datetime-date {
+                font-size: 11px;
+                opacity: 0.95;
+            }
+
+            .datetime-time {
+                font-size: 10px;
+                opacity: 0.75;
+                color: var(--accent-blue);
+            }
         </style>
     </head>
     <body>
         <div class="sidebar">
-            <div class="brand-title">PRO HUB v5.4</div>
+            <div class="brand-title">PRO HUB v5.5</div>
             
             <!-- 조건 검색 영역 -->
             <div class="search-area">
@@ -654,6 +744,7 @@
                 <div style="display: flex; align-items: center; margin-right: auto">
                     <button class="btn-toggle" onclick="toggleSidebar()">☰</button>
                     <button id="modeSwitcher" onclick="goToMobileSite()"><span>📱</span> <span>Mobile</span></button>
+                    <button id="darkModeBtn" onclick="toggleDarkMode()"><span>🌙</span> <span>Dark</span></button>
                     <button id="noteBtn" onclick="openNote()"><span>📝</span> <span>Note</span></button>
                 </div>
 
@@ -675,6 +766,13 @@
                         <button id="cycleBtn" class="btn-top-action" onclick="toggleCycle()">Go</button>
                     </div>
                     <button onclick="smartRefresh()" class="btn-top-action">↻</button>
+                    <div class="datetime-display" id="datetimeDisplay">
+                        <span class="datetime-icon">🕐</span>
+                        <div class="datetime-text">
+                            <span class="datetime-date" id="dateText">-</span>
+                            <span class="datetime-time" id="timeText">-</span>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -690,6 +788,32 @@
             let cycleIntervalTimer = null,
                 cycleMode = 'all',
                 sortableInstance = null;
+
+            // 다크모드 상태
+            let isDarkMode = localStorage.getItem('prohub_darkmode') === 'true';
+
+            // 날짜/시간 업데이트 함수
+            function updateDateTime() {
+                const now = new Date();
+                const month = now.getMonth() + 1;
+                const date = now.getDate();
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                const day = days[now.getDay()];
+                
+                let hours = now.getHours();
+                const minutes = now.getMinutes();
+                const ampm = hours >= 12 ? '오후' : '오전';
+                hours = hours % 12 || 12;
+                
+                const dateText = `${month}월 ${date}일 (${day})`;
+                const timeText = `${ampm} ${hours}시 ${minutes.toString().padStart(2, '0')}분`;
+                
+                document.getElementById('dateText').textContent = dateText;
+                document.getElementById('timeText').textContent = timeText;
+            }
+
+            // 1초마다 시간 업데이트
+            setInterval(updateDateTime, 1000);
 
             // 화면 분할 관련 변수
             let splitMode = 'single';
@@ -711,6 +835,52 @@
                 horizontal: [25, 25, 25, 25],
                 grid: [50, 50, 50, 50]
             };
+
+            // 다크모드 토글 함수
+            function toggleDarkMode() {
+                isDarkMode = !isDarkMode;
+                localStorage.setItem('prohub_darkmode', isDarkMode);
+                applyDarkMode();
+                
+                const btn = document.getElementById('darkModeBtn');
+                if (isDarkMode) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            }
+
+            // 다크모드 적용 함수
+            function applyDarkMode() {
+                if (splitMode === 'single') {
+                    const frame = document.getElementById('frame-0');
+                    const container = document.getElementById('container-0');
+                    if (frame) {
+                        if (isDarkMode) {
+                            frame.classList.add('dark-mode');
+                            if (container) container.classList.add('dark-mode');
+                        } else {
+                            frame.classList.remove('dark-mode');
+                            if (container) container.classList.remove('dark-mode');
+                        }
+                    }
+                } else {
+                    const maxFrames = splitMode === 'split2' ? 2 : splitMode === 'split3' ? 3 : 4;
+                    for (let i = 0; i < maxFrames; i++) {
+                        const frame = document.getElementById(`frame-${i}`);
+                        const container = document.getElementById(`container-${i}`);
+                        if (frame) {
+                            if (isDarkMode) {
+                                frame.classList.add('dark-mode');
+                                if (container) container.classList.add('dark-mode');
+                            } else {
+                                frame.classList.remove('dark-mode');
+                                if (container) container.classList.remove('dark-mode');
+                            }
+                        }
+                    }
+                }
+            }
 
             // 스크롤 위치 저장 함수
             function saveScrollPosition(frameIndex) {
@@ -800,6 +970,9 @@
                 const savedNote = localStorage.getItem('myHubNote') || '';
                 frame.style.opacity = '0';
 
+                // 노트 모드에서는 다크모드 필터 제거
+                frame.classList.remove('dark-mode');
+
                 frame.srcdoc = `
             <html>
             <head>
@@ -830,7 +1003,6 @@
                     let initialValue = document.getElementById('noteArea').value;
                     const saveBtn = document.getElementById('saveBtn');
                     
-                    // textarea 변화 감지
                     document.getElementById('noteArea').addEventListener('input', function() {
                         const currentValue = this.value;
                         if (currentValue !== initialValue) {
@@ -840,10 +1012,9 @@
                         }
                     });
                     
-                    // Ctrl+S 단축키로 저장
                     document.addEventListener('keydown', function(e) {
                         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                            e.preventDefault(); // 브라우저 기본 저장 동작 방지
+                            e.preventDefault();
                             if (!saveBtn.disabled) {
                                 saveNote();
                             }
@@ -853,14 +1024,13 @@
                     function saveNote() {
                         const val = document.getElementById('noteArea').value;
                         localStorage.setItem('myHubNote', val);
-                        initialValue = val; // 저장 후 초기값 업데이트
-                        saveBtn.disabled = true; // 저장 후 버튼 비활성화
+                        initialValue = val;
+                        saveBtn.disabled = true;
                     }
                 <\/script>
             </body>
             </html>
         `;
-
 
                 setTimeout(() => {
                     frame.style.opacity = '1';
@@ -969,7 +1139,6 @@
 
             function loadSite(url, title) {
                 if (splitMode === 'single') {
-                    // 현재 스크롤 저장
                     saveScrollPosition(0);
                     
                     currentUrl = url;
@@ -989,10 +1158,10 @@
                     frame.onload = () => {
                         frame.style.opacity = '1';
                         applyPcCrop();
+                        applyDarkMode();
                         restoreScrollPosition(0);
                     };
                 } else {
-                    // 현재 프레임 스크롤 저장
                     saveScrollPosition(selectedFrameIndex);
                     
                     frameUrls[selectedFrameIndex] = url;
@@ -1012,6 +1181,7 @@
                     frame.onload = () => {
                         frame.style.opacity = '1';
                         applyPcCrop();
+                        applyDarkMode();
                         restoreScrollPosition(selectedFrameIndex);
                     };
                 }
@@ -1026,6 +1196,7 @@
                     frame.src = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'r=' + Date.now();
                     frame.onload = () => {
                         applyPcCrop();
+                        applyDarkMode();
                         restoreScrollPosition(0);
                     };
                 } else {
@@ -1037,6 +1208,7 @@
                             frame.src = frameUrls[i] + (frameUrls[i].includes('?') ? '&' : '?') + 'r=' + Date.now();
                             frame.onload = () => {
                                 applyPcCrop();
+                                applyDarkMode();
                                 restoreScrollPosition(i);
                             };
                         }
@@ -1101,6 +1273,7 @@
                                     frame.src = frameUrls[i] + (frameUrls[i].includes('?') ? '&' : '?') + 'r=' + Date.now();
                                     frame.onload = () => {
                                         applyPcCrop();
+                                        applyDarkMode();
                                         restoreScrollPosition(i);
                                     };
                                 }
@@ -1110,59 +1283,54 @@
                 }
             }
 
-            // 조건 검색 함수 수정
-            // 조건 검색 함수 수정
-function executeSearch() {
-    const target = document.getElementById('searchTarget').value;
-    const keyword = document.getElementById('searchKeyword').value.trim();
-    
-    if (!keyword) return;
-    
-    let url = '';
-    let title = '';
-    
-    if (target === 'url') {
-        // URL 직접 입력
-        url = keyword;
-        if (!/^https?:\/\//i.test(url)) {
-            url = 'https://' + url;
-        }
-        title = 'Custom URL';
-    } else {
-        // 게시판별 검색
-        const encodedKeyword = encodeURIComponent(keyword);
-        const boardMap = {
-            'total': { 
-                url: `https://m.fmkorea.com/search.php?act=IS&is_keyword=${encodedKeyword}#gsc.tab=&gsc.q=leehs&gsc.sort=date&`, 
-                title: '펨코 검색' 
-            },
-            'best': { 
-                url: `https://m.fmkorea.com/search.php?mid=best&search_target=title_content&search_keyword=${encodedKeyword}`, 
-                title: '포텐 검색' 
-            },
-            'soccer': { 
-                url: `https://m.fmkorea.com/search.php?mid=football_world&category=&search_target=title&search_keyword=${encodedKeyword}`, 
-                title: '해축 검색' 
-            },
-            'humor': { 
-                url: `https://m.fmkorea.com/search.php?mid=humor&category=&search_target=title_content&search_keyword=${encodedKeyword}`, 
-                title: '유머 검색' 
-            },
-            'news': { 
-                url: `https://m.fmkorea.com/search.php?mid=football_news&category=&search_target=title_content&search_keyword=${encodedKeyword}`, 
-                title: '축소통 검색' 
+            function executeSearch() {
+                const target = document.getElementById('searchTarget').value;
+                const keyword = document.getElementById('searchKeyword').value.trim();
+                
+                if (!keyword) return;
+                
+                let url = '';
+                let title = '';
+                
+                if (target === 'url') {
+                    url = keyword;
+                    if (!/^https?:\/\//i.test(url)) {
+                        url = 'https://' + url;
+                    }
+                    title = 'Custom URL';
+                } else {
+                    const encodedKeyword = encodeURIComponent(keyword);
+                    const boardMap = {
+                        'total': { 
+                            url: `https://m.fmkorea.com/search.php?act=IS&is_keyword=${encodedKeyword}#gsc.tab=&gsc.q=leehs&gsc.sort=date&`, 
+                            title: '펨코 검색' 
+                        },
+                        'best': { 
+                            url: `https://m.fmkorea.com/search.php?mid=best&search_target=title_content&search_keyword=${encodedKeyword}`, 
+                            title: '포텐 검색' 
+                        },
+                        'soccer': { 
+                            url: `https://m.fmkorea.com/search.php?mid=football_world&category=&search_target=title&search_keyword=${encodedKeyword}`, 
+                            title: '해축 검색' 
+                        },
+                        'humor': { 
+                            url: `https://m.fmkorea.com/search.php?mid=humor&category=&search_target=title_content&search_keyword=${encodedKeyword}`, 
+                            title: '유머 검색' 
+                        },
+                        'news': { 
+                            url: `https://m.fmkorea.com/search.php?mid=football_news&category=&search_target=title_content&search_keyword=${encodedKeyword}`, 
+                            title: '축소통 검색' 
+                        }
+                    };
+                    
+                    const board = boardMap[target];
+                    url = board.url;
+                    title = board.title;
+                }
+                
+                loadSite(url, title);
+                document.getElementById('searchKeyword').value = '';
             }
-        };
-        
-        const board = boardMap[target];
-        url = board.url;
-        title = board.title;
-    }
-    
-    loadSite(url, title);
-    document.getElementById('searchKeyword').value = '';
-}
-
 
             function goToMobileSite() {
                 window.location.href = 'https://netflix7774.github.io/mobile/index.html';
@@ -1257,6 +1425,7 @@ function executeSearch() {
                     const frame = document.getElementById('frame-0');
                     frame.onload = () => {
                         applyPcCrop();
+                        applyDarkMode();
                         restoreScrollPosition(0);
                     };
                 } else if (splitMode === 'split2') {
@@ -1281,6 +1450,7 @@ function executeSearch() {
                             frame.onload = ((index) => {
                                 return () => {
                                     applyPcCrop();
+                                    applyDarkMode();
                                     restoreScrollPosition(index);
                                 };
                             })(i);
@@ -1318,6 +1488,7 @@ function executeSearch() {
                             frame.onload = ((index) => {
                                 return () => {
                                     applyPcCrop();
+                                    applyDarkMode();
                                     restoreScrollPosition(index);
                                 };
                             })(i);
@@ -1355,6 +1526,7 @@ function executeSearch() {
                             frame.onload = ((index) => {
                                 return () => {
                                     applyPcCrop();
+                                    applyDarkMode();
                                     restoreScrollPosition(index);
                                 };
                             })(i);
@@ -1403,6 +1575,7 @@ function executeSearch() {
                             frame.onload = ((index) => {
                                 return () => {
                                     applyPcCrop();
+                                    applyDarkMode();
                                     restoreScrollPosition(index);
                                 };
                             })(i);
@@ -1436,7 +1609,10 @@ function executeSearch() {
                     selectFrame(0);
                 }
                 
-                setTimeout(() => applyPcCrop(), 100);
+                setTimeout(() => {
+                    applyPcCrop();
+                    applyDarkMode();
+                }, 100);
             }
 
             function startResize(e) {
@@ -1546,6 +1722,14 @@ function executeSearch() {
                 if (!localStorage.getItem('myHubBookmarks')) localStorage.setItem('myHubBookmarks', JSON.stringify([{ name: '포텐', url: 'https://m.fmkorea.com/' }]));
                 renderBookmarks();
                 renderFrames();
+                
+                // 다크모드 초기화
+                if (isDarkMode) {
+                    document.getElementById('darkModeBtn').classList.add('active');
+                }
+                
+                // 날짜/시간 초기 표시
+                updateDateTime();
             };
         </script>
     </body>
