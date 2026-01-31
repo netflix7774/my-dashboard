@@ -472,6 +472,36 @@
                 background: var(--accent-blue);
             }
 
+            /* 프레임 세트 전환 버튼 */
+            .frame-set-toggle {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: rgba(48, 209, 88, 0.3);
+                border: 2px solid var(--accent-green);
+                color: white;
+                padding: 6px 14px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: bold;
+                cursor: pointer;
+                z-index: 999;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .frame-set-toggle:hover {
+                background: rgba(48, 209, 88, 0.6);
+                transform: scale(1.05);
+            }
+
+            .frame-set-toggle.active {
+                background: var(--accent-green);
+                box-shadow: 0 0 12px rgba(48, 209, 88, 0.6);
+            }
+
             /* 단일 모드에서는 선택 버튼 숨김 */
             .split-single .frame-selector {
                 display: none;
@@ -823,8 +853,14 @@
             // 화면 분할 관련 변수
             let splitMode = 'single';
             let selectedFrameIndex = 0;
-            let frameUrls = ['https://m.fmkorea.com/', '', '', ''];
-            let frameTitles = ['포텐', '', '', ''];
+            
+            // 8개의 프레임 URL과 제목 (최대 4분할 x 2세트)
+            let frameUrls = ['https://m.fmkorea.com/', '', '', '', '', '', '', ''];
+            let frameTitles = ['포텐', '', '', '', '', '', '', ''];
+            
+            // 현재 활성화된 프레임 세트 (0 또는 1)
+            let activeFrameSet = 0;
+            
             let resizeState = {
                 isResizing: false,
                 startPos: 0,
@@ -892,7 +928,7 @@
                 const url = frameUrls[frameIndex];
                 if (!url) return;
                 
-                const frame = document.getElementById(`frame-${frameIndex}`);
+                const frame = document.getElementById(`frame-${frameIndex % getMaxFrames()}`);
                 if (!frame) return;
                 
                 try {
@@ -910,7 +946,7 @@
                 const url = frameUrls[frameIndex];
                 if (!url) return;
                 
-                const frame = document.getElementById(`frame-${frameIndex}`);
+                const frame = document.getElementById(`frame-${frameIndex % getMaxFrames()}`);
                 if (!frame) return;
                 
                 try {
@@ -929,14 +965,23 @@
                 }
             }
 
+            // 현재 분할 모드의 최대 프레임 수 반환
+            function getMaxFrames() {
+                if (splitMode === 'single') return 1;
+                if (splitMode === 'split2') return 2;
+                if (splitMode === 'split3') return 3;
+                return 4;
+            }
+
             // 주기적으로 스크롤 위치 저장
             setInterval(() => {
                 if (splitMode === 'single') {
                     saveScrollPosition(0);
                 } else {
-                    const maxFrames = splitMode === 'split2' ? 2 : splitMode === 'split3' ? 3 : 4;
+                    const maxFrames = getMaxFrames();
+                    const offset = activeFrameSet * maxFrames;
                     for (let i = 0; i < maxFrames; i++) {
-                        saveScrollPosition(i);
+                        saveScrollPosition(offset + i);
                     }
                 }
             }, 2000);
@@ -1132,14 +1177,119 @@
 
             // 프레임 선택 함수
             function selectFrame(index) {
+                if (splitMode === 'single') return;
                 selectedFrameIndex = index;
+                updateFrameSelection();
+            }
+
+            // 프레임 세트 토글 함수
+            function toggleFrameSet() {
+                if (splitMode === 'single') return;
+                activeFrameSet = 1 - activeFrameSet;
+                switchFrameSet();
+            }
+
+            // 프레임 세트 전환
+            function switchFrameSet() {
+                const maxFrames = getMaxFrames();
+                const offset = activeFrameSet * maxFrames;
+                
+                // 모든 프레임 저장
+                for (let i = 0; i < maxFrames; i++) {
+                    const currentOffset = (1 - activeFrameSet) * maxFrames;
+                    saveScrollPosition(currentOffset + i);
+                }
+                
+                // 프레임 URL 업데이트
+                for (let i = 0; i < maxFrames; i++) {
+                    const frame = document.getElementById(`frame-${i}`);
+                    const titleEl = document.getElementById(`title-${i}`);
+                    const realIndex = offset + i;
+                    
+                    if (frame) {
+                        if (frameUrls[realIndex]) {
+                            frame.style.opacity = '0';
+                            frame.src = frameUrls[realIndex];
+                            
+                            if (titleEl) {
+                                titleEl.innerText = frameTitles[realIndex] || `프레임 ${realIndex + 1}`;
+                                titleEl.href = frameUrls[realIndex];
+                            }
+                            
+                            frame.onload = ((index) => {
+                                return () => {
+                                    frame.style.opacity = '1';
+                                    applyPcCrop();
+                                    applyDarkMode();
+                                    restoreScrollPosition(offset + index);
+                                };
+                            })(i);
+                        } else {
+                            frame.src = '';
+                            if (titleEl) {
+                                titleEl.innerText = `프레임 ${realIndex + 1}`;
+                                titleEl.href = '#';
+                            }
+                        }
+                    }
+                }
+                
+                // 세트 표시 업데이트
+                updateFrameSetDisplay();
+                updateFrameSelection();
+            }
+            
+            // 프레임 세트 표시 업데이트 (좌측 상단: 현재 슬롯 번호 1~8, 아래: 반대 세트 번호)
+            function updateFrameSetDisplay() {
+                const maxFrames = getMaxFrames();
+                
+                // 좌측 상단 프레임 번호: 현재 보는 슬롯(1~4 또는 5~8)
                 document.querySelectorAll('.frame-container').forEach((container, i) => {
-                    if (i === index) {
+                    const realIndex = activeFrameSet * maxFrames + i;
+                    const selector = container.querySelector('.frame-selector');
+                    if (selector) selector.textContent = realIndex + 1;
+                });
+                
+                // 아래 번호: 반대 세트(1~4일 땐 5~8, 5~8일 땐 1~4)
+                document.querySelectorAll('.frame-set-display').forEach((display, i) => {
+                    const otherSetSlot = (1 - activeFrameSet) * maxFrames + i + 1;
+                    display.textContent = `${otherSetSlot}`;
+                });
+                
+                // 세트 전환 버튼 텍스트 업데이트
+                const toggleBtn = document.querySelector('.frame-set-toggle');
+                if (toggleBtn) {
+                    let text = '';
+                    if (splitMode === 'split2') {
+                        text = activeFrameSet === 0 ? '1-2' : '3-4';
+                    } else if (splitMode === 'split3') {
+                        text = activeFrameSet === 0 ? '1-3' : '4-6';
+                    } else {
+                        text = activeFrameSet === 0 ? '1-4' : '5-8';
+                    }
+                    toggleBtn.innerHTML = `🔄 ${text}`;
+                }
+            }
+
+            // 프레임 선택 UI 업데이트
+            function updateFrameSelection() {
+                document.querySelectorAll('.frame-container').forEach((container, i) => {
+                    if (i === selectedFrameIndex) {
                         container.classList.add('selected');
                     } else {
                         container.classList.remove('selected');
                     }
                 });
+                
+                // 세트 전환 버튼 상태 업데이트
+                const toggleBtn = document.querySelector('.frame-set-toggle');
+                if (toggleBtn) {
+                    if (activeFrameSet === 1) {
+                        toggleBtn.classList.add('active');
+                    } else {
+                        toggleBtn.classList.remove('active');
+                    }
+                }
             }
 
             function loadSite(url, title) {
@@ -1167,10 +1317,14 @@
                         restoreScrollPosition(0);
                     };
                 } else {
-                    saveScrollPosition(selectedFrameIndex);
+                    const maxFrames = getMaxFrames();
+                    const offset = activeFrameSet * maxFrames;
+                    const realFrameIndex = offset + selectedFrameIndex;
                     
-                    frameUrls[selectedFrameIndex] = url;
-                    frameTitles[selectedFrameIndex] = title;
+                    saveScrollPosition(realFrameIndex);
+                    
+                    frameUrls[realFrameIndex] = url;
+                    frameTitles[realFrameIndex] = title;
                     
                     const frame = document.getElementById(`frame-${selectedFrameIndex}`);
                     const titleEl = document.getElementById(`title-${selectedFrameIndex}`);
@@ -1187,7 +1341,7 @@
                         frame.style.opacity = '1';
                         applyPcCrop();
                         applyDarkMode();
-                        restoreScrollPosition(selectedFrameIndex);
+                        restoreScrollPosition(realFrameIndex);
                     };
                 }
                 
@@ -1205,17 +1359,23 @@
                         restoreScrollPosition(0);
                     };
                 } else {
-                    const maxFrames = splitMode === 'split2' ? 2 : splitMode === 'split3' ? 3 : 4;
+                    const maxFrames = getMaxFrames();
+                    const offset = activeFrameSet * maxFrames;
+                    
                     for (let i = 0; i < maxFrames; i++) {
                         const frame = document.getElementById(`frame-${i}`);
-                        if (frameUrls[i] && frame) {
-                            saveScrollPosition(i);
-                            frame.src = frameUrls[i] + (frameUrls[i].includes('?') ? '&' : '?') + 'r=' + Date.now();
-                            frame.onload = () => {
-                                applyPcCrop();
-                                applyDarkMode();
-                                restoreScrollPosition(i);
-                            };
+                        const realIndex = offset + i;
+                        
+                        if (frameUrls[realIndex] && frame) {
+                            saveScrollPosition(realIndex);
+                            frame.src = frameUrls[realIndex] + (frameUrls[realIndex].includes('?') ? '&' : '?') + 'r=' + Date.now();
+                            frame.onload = ((idx) => {
+                                return () => {
+                                    applyPcCrop();
+                                    applyDarkMode();
+                                    restoreScrollPosition(offset + idx);
+                                };
+                            })(i);
                         }
                     }
                 }
@@ -1231,7 +1391,7 @@
                         frame.style.height = `${100 + parseInt(val)}%`;
                     }
                 } else {
-                    const maxFrames = splitMode === 'split2' ? 2 : splitMode === 'split3' ? 3 : 4;
+                    const maxFrames = getMaxFrames();
                     for (let i = 0; i < maxFrames; i++) {
                         const frame = document.getElementById(`frame-${i}`);
                         if (frame) {
@@ -1243,8 +1403,6 @@
             }
 
             function toggleCycleMode() {
-                if (splitMode !== 'single') return;
-                
                 const btn = document.getElementById('modeToggleBtn');
                 cycleMode = cycleMode === 'all' ? 'single' : 'all';
                 btn.innerText = cycleMode === 'all' ? 'All' : 'One';
@@ -1259,8 +1417,9 @@
                 } else {
                     let sec = parseInt(document.getElementById('cycleInterval').value) || 10;
                     btn.innerText = 'Stop';
-                    cycleIntervalTimer = setInterval(() => {
-                        if (splitMode === 'single') {
+                    
+                    if (splitMode === 'single') {
+                        cycleIntervalTimer = setInterval(() => {
                             if (cycleMode === 'all') {
                                 const bms = JSON.parse(localStorage.getItem('myHubBookmarks'));
                                 let idx = bms.findIndex((bm) => bm.url === currentUrl);
@@ -1269,22 +1428,19 @@
                             } else {
                                 smartRefresh();
                             }
-                        } else {
-                            const maxFrames = splitMode === 'split2' ? 2 : splitMode === 'split3' ? 3 : 4;
-                            for (let i = 0; i < maxFrames; i++) {
-                                const frame = document.getElementById(`frame-${i}`);
-                                if (frameUrls[i] && frame) {
-                                    saveScrollPosition(i);
-                                    frame.src = frameUrls[i] + (frameUrls[i].includes('?') ? '&' : '?') + 'r=' + Date.now();
-                                    frame.onload = () => {
-                                        applyPcCrop();
-                                        applyDarkMode();
-                                        restoreScrollPosition(i);
-                                    };
-                                }
+                        }, sec * 1000);
+                    } else {
+                        cycleIntervalTimer = setInterval(() => {
+                            if (cycleMode === 'all') {
+                                // All 모드: 프레임 세트 전환
+                                activeFrameSet = 1 - activeFrameSet;
+                                switchFrameSet();
+                            } else {
+                                // One 모드: 현재 프레임들만 새로고침
+                                smartRefresh();
                             }
-                        }
-                    }, sec * 1000);
+                        }, sec * 1000);
+                    }
                 }
             }
 
@@ -1381,6 +1537,7 @@
             function setSplitMode(mode) {
                 splitMode = mode;
                 selectedFrameIndex = 0;
+                activeFrameSet = 0;
                 
                 document.getElementById('splitDropdown').classList.remove('show');
                 
@@ -1395,18 +1552,6 @@
                     'grid': '2x2'
                 };
                 document.querySelector('.btn-split-current').innerText = modeNames[mode] + ' ▼';
-                
-                if (mode !== 'single') {
-                    cycleMode = 'single';
-                    document.getElementById('modeToggleBtn').innerText = 'One';
-                    document.getElementById('modeToggleBtn').disabled = true;
-                    document.getElementById('modeToggleBtn').style.opacity = '0.5';
-                    document.getElementById('modeToggleBtn').style.cursor = 'not-allowed';
-                } else {
-                    document.getElementById('modeToggleBtn').disabled = false;
-                    document.getElementById('modeToggleBtn').style.opacity = '1';
-                    document.getElementById('modeToggleBtn').style.cursor = 'pointer';
-                }
                 
                 renderFrames();
             }
@@ -1434,29 +1579,36 @@
                         restoreScrollPosition(0);
                     };
                 } else if (splitMode === 'split2') {
-                    for (let i = 0; i < 2; i++) {
+                    const maxFrames = 2;
+                    const offset = activeFrameSet * maxFrames;
+                    
+                    for (let i = 0; i < maxFrames; i++) {
                         const container = document.createElement('div');
                         container.className = 'frame-container';
                         container.id = `container-${i}`;
                         container.style.width = `${frameSizes.split2[i]}%`;
                         
+                        const realIndex = offset + i;
+                        const otherSetSlot = (1 - activeFrameSet) * maxFrames + i + 1;
+                        
                         container.innerHTML = `
-                            <div class="frame-selector" onclick="selectFrame(${i}); event.stopPropagation();">${i + 1}</div>
+                            <div class="frame-selector" onclick="selectFrame(${i});">${realIndex + 1}</div>
+                            <div class="frame-set-display" style="position: absolute; top: 50px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; z-index: 998;">${otherSetSlot}</div>
                             <div class="floating-title" id="title-container-${i}">
-                                <a id="title-${i}" href="${frameUrls[i] || '#'}" target="_blank">${frameTitles[i] || `프레임 ${i + 1}`}</a>
+                                <a id="title-${i}" href="${frameUrls[realIndex] || '#'}" target="_blank">${frameTitles[realIndex] || `프레임 ${realIndex + 1}`}</a>
                             </div>
-                            <iframe id="frame-${i}" src="${frameUrls[i] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                            <iframe id="frame-${i}" src="${frameUrls[realIndex] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
                         `;
                         
                         wrap.appendChild(container);
                         
                         const frame = document.getElementById(`frame-${i}`);
-                        if (frame && frameUrls[i]) {
+                        if (frame && frameUrls[realIndex]) {
                             frame.onload = ((index) => {
                                 return () => {
                                     applyPcCrop();
                                     applyDarkMode();
-                                    restoreScrollPosition(index);
+                                    restoreScrollPosition(offset + index);
                                 };
                             })(i);
                         }
@@ -1470,31 +1622,47 @@
                             wrap.appendChild(resizer);
                         }
                     }
-                    selectFrame(0);
+                    
+                    // 세트 전환 버튼 추가
+                    const toggleBtn = document.createElement('div');
+                    toggleBtn.className = 'frame-set-toggle';
+                    if (activeFrameSet === 1) toggleBtn.classList.add('active');
+                    toggleBtn.innerHTML = `🔄 ${activeFrameSet === 0 ? '1-2' : '3-4'}`;
+                    toggleBtn.onclick = toggleFrameSet;
+                    wrap.appendChild(toggleBtn);
+                    
+                    updateFrameSelection();
                 } else if (splitMode === 'split3') {
-                    for (let i = 0; i < 3; i++) {
+                    const maxFrames = 3;
+                    const offset = activeFrameSet * maxFrames;
+                    
+                    for (let i = 0; i < maxFrames; i++) {
                         const container = document.createElement('div');
                         container.className = 'frame-container';
                         container.id = `container-${i}`;
                         container.style.width = `${frameSizes.split3[i]}%`;
                         
+                        const realIndex = offset + i;
+                        const otherSetSlot = (1 - activeFrameSet) * maxFrames + i + 1;
+                        
                         container.innerHTML = `
-                            <div class="frame-selector" onclick="selectFrame(${i}); event.stopPropagation();">${i + 1}</div>
+                            <div class="frame-selector" onclick="selectFrame(${i});">${realIndex + 1}</div>
+                            <div class="frame-set-display" style="position: absolute; top: 50px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; z-index: 998;">${otherSetSlot}</div>
                             <div class="floating-title" id="title-container-${i}">
-                                <a id="title-${i}" href="${frameUrls[i] || '#'}" target="_blank">${frameTitles[i] || `프레임 ${i + 1}`}</a>
+                                <a id="title-${i}" href="${frameUrls[realIndex] || '#'}" target="_blank">${frameTitles[realIndex] || `프레임 ${realIndex + 1}`}</a>
                             </div>
-                            <iframe id="frame-${i}" src="${frameUrls[i] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                            <iframe id="frame-${i}" src="${frameUrls[realIndex] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
                         `;
                         
                         wrap.appendChild(container);
                         
                         const frame = document.getElementById(`frame-${i}`);
-                        if (frame && frameUrls[i]) {
+                        if (frame && frameUrls[realIndex]) {
                             frame.onload = ((index) => {
                                 return () => {
                                     applyPcCrop();
                                     applyDarkMode();
-                                    restoreScrollPosition(index);
+                                    restoreScrollPosition(offset + index);
                                 };
                             })(i);
                         }
@@ -1508,31 +1676,47 @@
                             wrap.appendChild(resizer);
                         }
                     }
-                    selectFrame(0);
+                    
+                    // 세트 전환 버튼 추가
+                    const toggleBtn = document.createElement('div');
+                    toggleBtn.className = 'frame-set-toggle';
+                    if (activeFrameSet === 1) toggleBtn.classList.add('active');
+                    toggleBtn.innerHTML = `🔄 ${activeFrameSet === 0 ? '1-3' : '4-6'}`;
+                    toggleBtn.onclick = toggleFrameSet;
+                    wrap.appendChild(toggleBtn);
+                    
+                    updateFrameSelection();
                 } else if (splitMode === 'horizontal') {
-                    for (let i = 0; i < 4; i++) {
+                    const maxFrames = 4;
+                    const offset = activeFrameSet * maxFrames;
+                    
+                    for (let i = 0; i < maxFrames; i++) {
                         const container = document.createElement('div');
                         container.className = 'frame-container';
                         container.id = `container-${i}`;
                         container.style.width = `${frameSizes.horizontal[i]}%`;
                         
+                        const realIndex = offset + i;
+                        const otherSetSlot = (1 - activeFrameSet) * maxFrames + i + 1;
+                        
                         container.innerHTML = `
-                            <div class="frame-selector" onclick="selectFrame(${i}); event.stopPropagation();">${i + 1}</div>
+                            <div class="frame-selector" onclick="selectFrame(${i});">${realIndex + 1}</div>
+                            <div class="frame-set-display" style="position: absolute; top: 50px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; z-index: 998;">${otherSetSlot}</div>
                             <div class="floating-title" id="title-container-${i}">
-                                <a id="title-${i}" href="${frameUrls[i] || '#'}" target="_blank">${frameTitles[i] || `프레임 ${i + 1}`}</a>
+                                <a id="title-${i}" href="${frameUrls[realIndex] || '#'}" target="_blank">${frameTitles[realIndex] || `프레임 ${realIndex + 1}`}</a>
                             </div>
-                            <iframe id="frame-${i}" src="${frameUrls[i] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                            <iframe id="frame-${i}" src="${frameUrls[realIndex] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
                         `;
                         
                         wrap.appendChild(container);
                         
                         const frame = document.getElementById(`frame-${i}`);
-                        if (frame && frameUrls[i]) {
+                        if (frame && frameUrls[realIndex]) {
                             frame.onload = ((index) => {
                                 return () => {
                                     applyPcCrop();
                                     applyDarkMode();
-                                    restoreScrollPosition(index);
+                                    restoreScrollPosition(offset + index);
                                 };
                             })(i);
                         }
@@ -1546,9 +1730,21 @@
                             wrap.appendChild(resizer);
                         }
                     }
-                    selectFrame(0);
+                    
+                    // 세트 전환 버튼 추가
+                    const toggleBtn = document.createElement('div');
+                    toggleBtn.className = 'frame-set-toggle';
+                    if (activeFrameSet === 1) toggleBtn.classList.add('active');
+                    toggleBtn.innerHTML = `🔄 ${activeFrameSet === 0 ? '1-4' : '5-8'}`;
+                    toggleBtn.onclick = toggleFrameSet;
+                    wrap.appendChild(toggleBtn);
+                    
+                    updateFrameSelection();
                 } else if (splitMode === 'grid') {
-                    for (let i = 0; i < 4; i++) {
+                    const maxFrames = 4;
+                    const offset = activeFrameSet * maxFrames;
+                    
+                    for (let i = 0; i < maxFrames; i++) {
                         const container = document.createElement('div');
                         container.className = 'frame-container';
                         container.id = `container-${i}`;
@@ -1565,23 +1761,27 @@
                             container.style.width = `${frameSizes.grid[i]}%`;
                         }
                         
+                        const realIndex = offset + i;
+                        const otherSetSlot = (1 - activeFrameSet) * maxFrames + i + 1;
+                        
                         container.innerHTML = `
-                            <div class="frame-selector" onclick="selectFrame(${i}); event.stopPropagation();">${i + 1}</div>
+                            <div class="frame-selector" onclick="selectFrame(${i});">${realIndex + 1}</div>
+                            <div class="frame-set-display" style="position: absolute; top: 50px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; z-index: 998;">${otherSetSlot}</div>
                             <div class="floating-title" id="title-container-${i}">
-                                <a id="title-${i}" href="${frameUrls[i] || '#'}" target="_blank">${frameTitles[i] || `프레임 ${i + 1}`}</a>
+                                <a id="title-${i}" href="${frameUrls[realIndex] || '#'}" target="_blank">${frameTitles[realIndex] || `프레임 ${realIndex + 1}`}</a>
                             </div>
-                            <iframe id="frame-${i}" src="${frameUrls[i] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+                            <iframe id="frame-${i}" src="${frameUrls[realIndex] || ''}" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
                         `;
                         
                         wrap.appendChild(container);
                         
                         const frame = document.getElementById(`frame-${i}`);
-                        if (frame && frameUrls[i]) {
+                        if (frame && frameUrls[realIndex]) {
                             frame.onload = ((index) => {
                                 return () => {
                                     applyPcCrop();
                                     applyDarkMode();
-                                    restoreScrollPosition(index);
+                                    restoreScrollPosition(offset + index);
                                 };
                             })(i);
                         }
@@ -1611,12 +1811,21 @@
                     vResizer2.addEventListener('mousedown', startResize);
                     wrap.appendChild(vResizer2);
                     
-                    selectFrame(0);
+                    // 세트 전환 버튼 추가
+                    const toggleBtn = document.createElement('div');
+                    toggleBtn.className = 'frame-set-toggle';
+                    if (activeFrameSet === 1) toggleBtn.classList.add('active');
+                    toggleBtn.innerHTML = `🔄 ${activeFrameSet === 0 ? '1-4' : '5-8'}`;
+                    toggleBtn.onclick = toggleFrameSet;
+                    wrap.appendChild(toggleBtn);
+                    
+                    updateFrameSelection();
                 }
                 
                 setTimeout(() => {
                     applyPcCrop();
                     applyDarkMode();
+                    updateFrameSelection();
                 }, 100);
             }
 
